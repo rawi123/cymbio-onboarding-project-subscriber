@@ -1,17 +1,17 @@
 import amqp from "amqplib";
-import addToDB from "../mysql-connection/addToDB";
+import addToDBThrowIfErr from "../mysql-connection/addToDB";
 
-const consumer = (channel: amqp.Channel): void => {
-    channel.consume("orders", async (message): Promise<any> => {
+const consumer = async(channel: amqp.Channel): Promise<any> => {
+    await channel.consume("orders", async (message): Promise<any> => {
         try {
-            const input = message ? JSON.parse(message.content.toString()) : "";
+            const input:string = message ? JSON.parse(message.content.toString()) : "";
 
             if (messageIsEmpty(message))
                 throw new Error("input is empty");
 
-            await addToDB(input)
-            deleteMessage(message,channel)
-            console.log("added to DB")
+            await addToDBThrowIfErr(input);
+            deleteMessage(message,channel);
+            console.log("added to DB");
 
         }
 
@@ -32,7 +32,7 @@ const consumer = (channel: amqp.Channel): void => {
 }
 
 
-const messageIsEmpty=(message:any):Boolean=>{
+const messageIsEmpty=(message:any):boolean=>{
     return (!message || !Object.keys(message).length);
 }
 

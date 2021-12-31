@@ -7,7 +7,8 @@ const connect = async (): Promise<any> => {
         const channel: amqp.Channel = await connection.createChannel();
         const results: any = await channel.assertQueue("orders");
         console.log("listening to messages in orders queue");
-        consumer(channel);
+        await consumer(channel);
+
     } catch (err) {
         console.log(err);
         setTimeout(()=>{

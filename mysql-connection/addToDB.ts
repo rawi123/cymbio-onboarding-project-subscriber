@@ -1,8 +1,7 @@
 import db from "./mysql";
-import messageConsumer from "../rabbit/messageConsumer";
 
 
-const addToDB = async (message: any): Promise<any> => {
+const addToDBThrowIfErr = async (message: any): Promise<any> => {
     if (await runTests(message)) {
         return true;
     }
@@ -11,31 +10,24 @@ const addToDB = async (message: any): Promise<any> => {
 
 }
 
-const runTests = async (message: any): Promise<Boolean> => {
+const runTests = async (message: any): Promise<boolean> => {
 
     if (!await checkRetailerExsit(message) ||
-        !await checkVariantsForLines(message)) {
-        return false;
-    }
-
-    if (!await insertToDb(message)) {
+        !await checkVariantsForLines(message) ||
+        !await insertToDb(message)) {
         return false;
     }
 
     return true;
-
 }
 
-
-const checkRetailerExsit = async (message: any): Promise<Boolean> => {
+const checkRetailerExsit = async (message: any): Promise<boolean> => {
 
     try {
-        let sql = `
-        SELECT * FROM retailers
-        WHERE retailer_id=${message.retailer_id}
-        `;
+        let sql: string = `SELECT * FROM retailers
+                   WHERE retailer_id=${message.retailer_id}`;
 
-        const retailerExist = await runQueryCheckExists(sql);
+        const retailerExist: boolean = await runQueryCheckExists(sql);
         if (!retailerExist) {
             console.log("failed test retailer does not exist")
         }
@@ -44,23 +36,19 @@ const checkRetailerExsit = async (message: any): Promise<Boolean> => {
     } catch (err) {
         throw(err);
     }
-
 }
 
-
-const checkVariantsForLines = async (message: any): Promise<Boolean> => {
+const checkVariantsForLines = async (message: any): Promise<boolean> => {
     try {
         if (!message.order_lines || !message.order_lines.length)
             return false;
 
-        let allVariantExists = true;
+        let allVariantExists: boolean = true;
 
         for (let i = 0; i < message.order_lines.length; i++) {
 
-            const sql = `
-                SELECT * FROM variants
-                WHERE variant_id=${message.order_lines[i].variant_id};
-                `
+            const sql: string = `SELECT * FROM variants
+                         WHERE variant_id=${message.order_lines[i].variant_id};`
 
             if (!await runQueryCheckExists(sql)) {
                 allVariantExists = false;
@@ -70,23 +58,20 @@ const checkVariantsForLines = async (message: any): Promise<Boolean> => {
         }
         return allVariantExists;
 
-
     } catch (err) {
         throw(err);
     }
 }
 
-
-const insertToDb = async (message: any): Promise<Boolean> => {
-    const orderNumber: Number = await addOrder(message);
+const insertToDb = async (message: any): Promise<boolean> => {
+    const orderNumber: number = await addOrder(message);
     await addOrderLines(message, orderNumber);
     return true;
-
 }
 
-const addOrder = async (message: any): Promise<Number> => {
+const addOrder = async (message: any): Promise<number> => {
 
-    const sql = `
+    const sql:string = `
             INSERT INTO orders
             VALUES (DEFAULT, 
                     "${message.type}",
@@ -94,20 +79,20 @@ const addOrder = async (message: any): Promise<Number> => {
                     "${message.shipping_method_code}",
                     ${message.retailer_id},
                     ${message.expired},
-                    DEFAULT);
-            `
-    const orderId = await insertSingleDb(sql);
+                    DEFAULT);`
+
+    const orderId:number = await insertSingleDb(sql);
     console.log("order has been added!")
     return orderId;
 
 }
 
-const addOrderLines = async (message: any, orderNumber: Number): Promise<Boolean> => {
-    let allOrderLinesAdded = true;
+const addOrderLines = async (message: any, orderNumber: number): Promise<boolean> => {
+    let allOrderLinesAdded:boolean = true;
 
     for (let i = 0; i < message.order_lines.length; i++) {
         const single_order_line = message.order_lines[i];
-        const sql = `
+        const sql:string = `
             INSERT INTO order_lines
             VALUES (DEFAULT, 
                     "${JSON.stringify(single_order_line.notes)}", 
@@ -129,8 +114,8 @@ const addOrderLines = async (message: any, orderNumber: Number): Promise<Boolean
     return allOrderLinesAdded;
 }
 
-const runQueryCheckExists = async (sql: any) => {
-    const query = new Promise<Boolean>((resolve, reject) => {
+const runQueryCheckExists = async (sql: string): Promise<boolean> => {
+    const query = new Promise<boolean>((resolve, reject) => {
         db.query(sql, (err, res) => {
 
             if (err)
@@ -145,18 +130,18 @@ const runQueryCheckExists = async (sql: any) => {
     return await query;
 }
 
-const insertSingleDb = async (sql: any) => {
+const insertSingleDb = async (sql: any):Promise<number> => {
 
     const query = new Promise<any>((resolve, reject) => {
         db.query(sql, (err, res) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(res);
+            if (err)
+                reject(err);
+            else
+                resolve(res);
         })
     })
 
     return (await query).insertId;
 }
 
-export default addToDB;
+export default addToDBThrowIfErr;

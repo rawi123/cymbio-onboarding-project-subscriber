@@ -9,16 +9,18 @@ const app: express.Application = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-db.connect((err: any): void => {
-    if (err) {
-        throw err;
-    }
-    console.log("connected to mysql");
-    rabbitConnect();
-});
+console.log("connecting to DB");
 
+db.connect(async (err: any): Promise<any> => {
+    if (err)
+        throw(err);
+
+    console.log("connected to mysql");
+    await rabbitConnect();
+});
 
 
 app.listen(8080, (): void => {
     console.log("server on port 8080");
 })
+
