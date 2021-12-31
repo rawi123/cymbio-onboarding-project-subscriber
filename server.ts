@@ -3,9 +3,10 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import rabbitConnect from "./rabbit/rabbitSubscriber";
-
+import router from "./router/router";
 const app: express.Application = express();
 
+app.use("/",router);
 app.use(cors());
 app.use(bodyParser.json());
 
