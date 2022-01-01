@@ -88,11 +88,12 @@ const addOrder = async (message: any): Promise<number> => {
 }
 
 const addOrderLines = async (message: any, orderNumber: number): Promise<boolean> => {
-    let allOrderLinesAdded:boolean = true;
+    try{
+        let allOrderLinesAdded:boolean = true;
 
-    for (let i = 0; i < message.order_lines.length; i++) {
-        const single_order_line = message.order_lines[i];
-        const sql:string = `
+        for (let i = 0; i < message.order_lines.length; i++) {
+            const single_order_line = message.order_lines[i];
+            const sql:string = `
             INSERT INTO order_lines
             VALUES (DEFAULT, 
                     "${JSON.stringify(single_order_line.notes)}", 
@@ -101,17 +102,31 @@ const addOrderLines = async (message: any, orderNumber: number): Promise<boolean
                     ${single_order_line.billed_amount},
                     ${single_order_line.unit_price},
                     ${single_order_line.tax_billed_amount},
-                    ${single_order_line.variant_id},
-                    "${single_order_line.retailer_sku}");
+                    ${single_order_line.variant_id});
             `
-        if (!await insertSingleDb(sql)) {
-            allOrderLinesAdded = false
-            console.log("failed in adding order line");
+            if (!await insertSingleDb(sql)) {
+                allOrderLinesAdded = false;
+                await deleteOrder(orderNumber);
+                console.log("failed in adding order line, deleting order: ",orderNumber);
+            }
         }
-    }
 
-    console.log("all order lines has been added")
-    return allOrderLinesAdded;
+        console.log("all order lines has been added")
+        return allOrderLinesAdded;
+    }
+    catch(err){
+        await deleteOrder(orderNumber);
+        throw err;
+    }
+}
+
+const deleteOrder=async (orderNumber:number)=>{
+    console.log(`deleting order number:${orderNumber} and order_lines due to fail in adding order line`);
+    const sql:string=`DELETE FROM orders
+                      WHERE order_id=${orderNumber};
+                      DELETE FROM order_lines
+                      WHERE order_id=${orderNumber};`;
+    await runQueryCheckExists(sql);
 }
 
 const runQueryCheckExists = async (sql: string): Promise<boolean> => {

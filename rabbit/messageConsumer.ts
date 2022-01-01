@@ -17,33 +17,37 @@ const consumer = async (channel: amqp.Channel): Promise<any> => {
             console.log("added to DB");
 
         } catch (err: any) {
-            let messageUpdateRetries = incrementMessageRetry(message);
-
-            if (err.message === "input is empty") {
-                logError(err, "message deleted - input is empty");
-                deleteMessage(message, channel);
-                return;
-            }
-
-            if (err.message === "max retries reached") {
-                logError(err, " message in queue for further investigation ");
-                return
-            }
-
-            if (err.message === "didnt pass tests") {
-                logError(err, "");
-            }
-
-            else {
-                logError(err, "data base error might be a wrong query!");
-            }
-
-
-            deleteMessage(message, channel);
-            addMessageToQueue(messageUpdateRetries,channel);
+            handelReject(err,message,channel);
 
         }
     })
+}
+
+const handelReject=(err:any,message:any,channel:amqp.Channel):void=>{
+    let messageUpdateRetries = incrementMessageRetry(message);
+
+    if (err.message === "input is empty") {
+        logError(err, "message deleted - input is empty");
+        deleteMessage(message, channel);
+        return;
+    }
+
+    if (err.message === "max retries reached") {
+        logError(err, " message in queue for further investigation ");
+        return
+    }
+
+    if (err.message === "didnt pass tests") {
+        logError(err, "");
+    }
+
+    else {
+        logError(err, "data base error might be a wrong query!");
+    }
+
+
+    deleteMessage(message, channel);
+    addMessageToQueue(messageUpdateRetries,channel);
 }
 
 const addMessageToQueue=(message:any,channel:amqp.Channel)=>{
