@@ -2,7 +2,7 @@ import db from "./mysql";
 
 
 const addToDBThrowIfErr = async (message: any): Promise<any> => {
-    if (await runTests(message)) {
+    if (await runTestsAddToDb(message)) {
         return true;
     }
 
@@ -10,7 +10,7 @@ const addToDBThrowIfErr = async (message: any): Promise<any> => {
 
 }
 
-const runTests = async (message: any): Promise<boolean> => {
+const runTestsAddToDb = async (message: any): Promise<boolean> => {
 
     if (!await checkRetailerExsit(message) ||
         !await checkVariantsForLines(message) ||
@@ -106,7 +106,7 @@ const addOrderLines = async (message: any, orderNumber: number): Promise<boolean
             `
         if (!await insertSingleDb(sql)) {
             allOrderLinesAdded = false
-            console.log("failed in adding order line")
+            console.log("failed in adding order line");
         }
     }
 
