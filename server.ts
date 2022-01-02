@@ -15,11 +15,12 @@ console.log("connecting to DB");
 db.connect(async (err: any): Promise<any> => {
     if (err)
         throw(err);
-
     console.log("connected to mysql");
-    await rabbitConnect();
 });
 
+rabbitConnect().then(res=>{
+    console.log("connected to rabbit")
+});
 
 app.listen(8080, (): void => {
     console.log("server on port 8080");

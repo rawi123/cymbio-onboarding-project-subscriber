@@ -1,7 +1,7 @@
 import amqp from "amqplib";
 import addToDBThrowIfErr from "../mysql-connection/addToDB";
 
-const consumer = async (channel: amqp.Channel): Promise<any> => {
+const consumer = async (channel: amqp.Channel): Promise<void> => {
     await channel.consume("orders", async (message): Promise<any> => {
         try {
             const input = message ? JSON.parse(message.content.toString()) : "";
@@ -24,7 +24,7 @@ const consumer = async (channel: amqp.Channel): Promise<any> => {
 }
 
 const handelReject=(err:any,message:any,channel:amqp.Channel):void=>{
-    let messageUpdateRetries = incrementMessageRetry(message);
+    let messageUpdatedRetries = incrementMessageRetry(message);
 
     if (err.message === "input is empty") {
         logError(err, "message deleted - input is empty");
@@ -47,7 +47,7 @@ const handelReject=(err:any,message:any,channel:amqp.Channel):void=>{
 
 
     deleteMessage(message, channel);
-    addMessageToQueue(messageUpdateRetries,channel);
+    addMessageToQueue(messageUpdatedRetries,channel);
 }
 
 const addMessageToQueue=(message:any,channel:amqp.Channel)=>{

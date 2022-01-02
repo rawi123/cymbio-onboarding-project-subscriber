@@ -1,7 +1,7 @@
 import amqp from "amqplib";
 import consumer from "./messageConsumer";
 
-const connect = async (): Promise<any> => {
+const connect = async (): Promise<void> => {
     try {
         const connection: amqp.Connection = await amqp.connect("amqp://localhost");
         const channel: amqp.Channel = await connection.createChannel();
