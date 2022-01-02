@@ -2,8 +2,9 @@ import db from "./mysql-connection/mysql";
 import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import rabbitConnect from "./rabbit/rabbitSubscriber";
 import router from "./router/router";
+import DBconsumer from "./rabbit/messageConsumer";
+import RabbitClass from "./rabbit/rabbitSubscriber";
 const app: express.Application = express();
 
 app.use("/",router);
@@ -18,9 +19,15 @@ db.connect(async (err: any): Promise<any> => {
     console.log("connected to mysql");
 });
 
-// rabbitConnect().then(res=>{
-//     console.log("connected to rabbit")
-// });
+const ordersQueue:RabbitClass= new RabbitClass("orders");
+
+ordersQueue.initializeQueue().then(()=>{
+    if(ordersQueue.getChannel()){
+        ordersQueue.consumeMessages(DBconsumer);
+    }
+}).catch(err=>{
+    console.log(err);
+})
 
 app.listen(8080, (): void => {
     console.log("server on port 8080");

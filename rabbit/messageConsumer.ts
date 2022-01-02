@@ -1,34 +1,40 @@
 import amqp from "amqplib";
 import addToDBThrowIfErr from "../mysql-connection/addToDB";
+import RabbitClass from "./rabbitSubscriber";
 
-const consumer = async (channel: amqp.Channel): Promise<void> => {
-    await channel.consume("orders", async (message): Promise<any> => {
-        try {
-            const input = message ? JSON.parse(message.content.toString()) : "";
 
-            if (messageIsEmpty(message))
-                throw new Error("input is empty");
+//await consumer(channel);
 
-            if (input.retryCount >= 3)
-                throw new Error("max retries reached");
 
-            await addToDBThrowIfErr(input);
-            deleteMessage(message, channel);
-            console.log("added to DB");
+const DBconsumer = async (message: any,queue:RabbitClass): Promise<void> => {
+    const  objectMessage= message ? JSON.parse(message.content.toString()) : "";
 
-        } catch (err: any) {
-            handelReject(err,message,channel);
+    try {
+        if (messageIsEmpty(objectMessage))
+            throw new Error("input is empty");
 
-        }
-    })
+        if (objectMessage.retryCount >= 3)
+            throw new Error("max retries reached");
+
+        await addToDBThrowIfErr(objectMessage);
+        //@ts-ignore
+        deleteMessage(message, queue.channel);
+        console.log("added to DB");
+
+    } catch (err: any) {
+        //@ts-ignore
+        handelReject(err, message, queue);
+    }
 }
 
-const handelReject=(err:any,message:any,channel:amqp.Channel):void=>{
+const handelReject = (err: any, message: any, queue: RabbitClass): void => {
     let messageUpdatedRetries = incrementMessageRetry(message);
 
     if (err.message === "input is empty") {
         logError(err, "message deleted - input is empty");
-        deleteMessage(message, channel);
+
+        //@ts-ignore
+        deleteMessage(message, queue.channel);
         return;
     }
 
@@ -39,35 +45,24 @@ const handelReject=(err:any,message:any,channel:amqp.Channel):void=>{
 
     if (err.message === "didnt pass tests") {
         logError(err, "");
-    }
-
-    else {
+    } else {
         logError(err, "data base error might be a wrong query!");
     }
 
-
-    deleteMessage(message, channel);
-    reAddMessageToQueue(messageUpdatedRetries,channel);
+    //@ts-ignore
+    deleteMessage(message, queue.channel);
+    queue.reAddMessageToQueue(messageUpdatedRetries);
 }
 
-const reAddMessageToQueue=(message:any,channel:amqp.Channel)=>{
 
-    if (message.retryCount <= 3) {
-        const messageBuffedWithRetry=Buffer.from(JSON.stringify(message));
-        channel.sendToQueue("orders", messageBuffedWithRetry);
-        console.log("message added to queue ,retry number: ",message.retryCount );
-    }
-}
 
-const messageIsEmpty = (message: any): boolean => {
-    return (!message || !Object.keys(message).length);
-}
 
 const incrementMessageRetry = (message: any): any => {
-    let input=message!==null?JSON.parse(message.content.toString()):"";
+    let input = message !== null ? JSON.parse(message.content.toString()) : "";
     input.retryCount = input.retryCount + 1 || 1;
     return input;
 }
+
 
 const logError = (err: any, message: String): void => {
     console.log(err.message);
@@ -80,6 +75,9 @@ const deleteMessage = (message: any, channel: amqp.Channel): void => {
         channel.ack(message);
 }
 
+const messageIsEmpty = (message: any): boolean => {
+    return (!message || !Object.keys(message).length);
+}
 
-export default consumer;
+export default DBconsumer;
 

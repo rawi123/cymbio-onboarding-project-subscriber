@@ -2,19 +2,18 @@ import db from "./mysql";
 
 
 const addToDBThrowIfErr = async (message: any): Promise<any> => {
-    if (await runTestsAddToDb(message)) {
-        return true;
+    if (await runTests(message)) {
+        if(await insertToDb(message))
+            return true;
     }
-
     throw new Error("didnt pass tests");
 
 }
 
-const runTestsAddToDb = async (message: any): Promise<boolean> => {
+const runTests = async (message: any): Promise<boolean> => {
 
     if (!await checkRetailerExsit(message) ||
-        !await checkVariantsForLines(message) ||
-        !await insertToDb(message)) {
+        !await checkVariantsForLines(message)) {
         return false;
     }
 
