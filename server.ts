@@ -18,9 +18,9 @@ db.connect(async (err: any): Promise<any> => {
     console.log("connected to mysql");
 });
 
-rabbitConnect().then(res=>{
-    console.log("connected to rabbit")
-});
+// rabbitConnect().then(res=>{
+//     console.log("connected to rabbit")
+// });
 
 app.listen(8080, (): void => {
     console.log("server on port 8080");

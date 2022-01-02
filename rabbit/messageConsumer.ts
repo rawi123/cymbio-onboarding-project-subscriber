@@ -47,10 +47,10 @@ const handelReject=(err:any,message:any,channel:amqp.Channel):void=>{
 
 
     deleteMessage(message, channel);
-    addMessageToQueue(messageUpdatedRetries,channel);
+    reAddMessageToQueue(messageUpdatedRetries,channel);
 }
 
-const addMessageToQueue=(message:any,channel:amqp.Channel)=>{
+const reAddMessageToQueue=(message:any,channel:amqp.Channel)=>{
 
     if (message.retryCount <= 3) {
         const messageBuffedWithRetry=Buffer.from(JSON.stringify(message));
@@ -70,8 +70,8 @@ const incrementMessageRetry = (message: any): any => {
 }
 
 const logError = (err: any, message: String): void => {
-    console.log(err.message)
-    console.log(message)
+    console.log(err.message);
+    console.log(message);
 }
 
 
