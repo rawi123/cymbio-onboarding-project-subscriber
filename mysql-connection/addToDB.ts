@@ -1,16 +1,17 @@
 import db from "./mysql";
+import {reqBody,orderLine} from "../interfaces/requrestInterface";
+import {didntPassTests} from "../rabbit/messageConsumer";
 
-
-const addToDBThrowIfErr = async (message: any): Promise<any> => {
+const addToDBThrowIfErr = async (message: reqBody): Promise<any> => {
     if (await runTests(message)) {
         if (await insertToDb(message))
             return true;
     }
-    throw new Error("didnt pass tests");
+    throw new Error(didntPassTests);
 
 }
 
-const runTests = async (message: any): Promise<boolean> => {
+const runTests = async (message: reqBody): Promise<boolean> => {
 
     if (!await checkRetailerExsit(message) ||
         !await checkVariantsForLines(message)) {
@@ -20,7 +21,7 @@ const runTests = async (message: any): Promise<boolean> => {
     return true;
 }
 
-const checkRetailerExsit = async (message: any): Promise<boolean> => {
+const checkRetailerExsit = async (message: reqBody): Promise<boolean> => {
 
     try {
         let sql: string = `SELECT * FROM retailers
@@ -37,7 +38,7 @@ const checkRetailerExsit = async (message: any): Promise<boolean> => {
     }
 }
 
-const checkVariantsForLines = async (message: any): Promise<boolean> => {
+const checkVariantsForLines = async (message: reqBody): Promise<boolean> => {
     try {
         if (!message.order_lines || !message.order_lines.length)
             return false;
@@ -62,13 +63,13 @@ const checkVariantsForLines = async (message: any): Promise<boolean> => {
     }
 }
 
-const insertToDb = async (message: any): Promise<boolean> => {
+const insertToDb = async (message: reqBody): Promise<boolean> => {
     const orderNumber: number = await addOrder(message);
     await addOrderLines(message, orderNumber);
     return true;
 }
 
-const addOrder = async (message: any): Promise<number> => {
+const addOrder = async (message: reqBody): Promise<number> => {
 
     const sql: string = `
             INSERT INTO orders
@@ -86,7 +87,7 @@ const addOrder = async (message: any): Promise<number> => {
 
 }
 
-const addOrderLines = async (message: any, orderNumber: number): Promise<boolean> => {
+const addOrderLines = async (message: reqBody, orderNumber: number): Promise<boolean> => {
     try {
         let allOrderLinesAdded: boolean = true;
 

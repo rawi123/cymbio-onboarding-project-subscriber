@@ -1,5 +1,5 @@
 import amqp from "amqplib";
-import reqBody from "../interfaces/requrestInterface";
+import {reqBody} from "../interfaces/requrestInterface";
 
 
 
@@ -31,7 +31,7 @@ class RabbitClass {
         try {
             if(!this.channel) throw ("channel is null");
 
-            await this.channel.consume(this.channelName, async (message:amqp.Message|null): Promise<any> => {
+            await this.channel.consume(this.channelName, async (message:amqp.Message|null): Promise<void> => {
                 if(!this.channel)
                     throw new Error("Channel is null");
 

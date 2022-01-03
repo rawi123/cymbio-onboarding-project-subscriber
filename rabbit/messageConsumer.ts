@@ -1,21 +1,23 @@
 import amqp from "amqplib";
 import addToDBThrowIfErr from "../mysql-connection/addToDB";
 import RabbitClass from "./rabbitSubscriber";
+import {reqBody, validOrderBody} from "../interfaces/requrestInterface";
 
+export const invalidInputErr: string = "input is invalid";
+export const maxRetriesReached: string = "max retries reached";
+export const didntPassTests: string = "didnt pass tests";
 
-//await consumer(channel);
+const addToDbConsumer = async (message: amqp.Message|null, queue: RabbitClass): Promise<void> => {
 
-
-const addToDbConsumer = async (message: any,queue:RabbitClass): Promise<void> => {
-
-    const  objectMessage= message ? JSON.parse(message.content.toString()) : "";
+    const objectMessage: reqBody = message ? JSON.parse(message.content.toString()) : "";
 
     try {
-        if (messageIsEmpty(objectMessage))
-            throw new Error("input is empty");
+        if (messageIsInvalid(objectMessage)) {
+            throw new Error(invalidInputErr);
+        }
 
-        if (objectMessage.retryCount >= 3)
-            throw new Error("max retries reached");
+        if (objectMessage.retryCount && objectMessage.retryCount >= 3)
+            throw new Error(maxRetriesReached);
 
         await addToDBThrowIfErr(objectMessage);
         //@ts-ignore
@@ -24,27 +26,28 @@ const addToDbConsumer = async (message: any,queue:RabbitClass): Promise<void> =>
 
     } catch (err: any) {
         //@ts-ignore
-        handelReject(err, message, queue);
+        await handelReject(err, message, queue);
     }
 }
 
-const handelReject = (err: any, message: any, queue: RabbitClass): void => {
-    let messageUpdatedRetries = incrementMessageRetry(message);
+const handelReject = async (err: any, message: amqp.Message|null, queue: RabbitClass): Promise<void> => {
 
-    if (err.message === "input is empty") {
-        logError(err, "message deleted - input is empty");
-
+    if (err.message === invalidInputErr) {
+        logError(err, "message deleted - input is invalid");
         //@ts-ignore
         deleteMessage(message, queue.channel);
         return;
     }
+    //@ts-ignore can't be null- null is handled in the case above
+    let messageUpdatedRetries = incrementMessageRetry(message);
 
-    if (err.message === "max retries reached") {
+
+    if (err.message === maxRetriesReached) {
         logError(err, " message in queue for further investigation ");
         return
     }
 
-    if (err.message === "didnt pass tests") {
+    if (err.message === didntPassTests) {
         logError(err, "");
     } else {
         logError(err, "data base error might be a wrong query!");
@@ -52,13 +55,11 @@ const handelReject = (err: any, message: any, queue: RabbitClass): void => {
 
     //@ts-ignore
     deleteMessage(message, queue.channel);
-    queue.reAddMessageToQueue(messageUpdatedRetries);
+    await queue.reAddMessageToQueue(messageUpdatedRetries);
 }
 
 
-
-
-const incrementMessageRetry = (message: any): any => {
+const incrementMessageRetry = (message: amqp.Message): any => {
     let input = message !== null ? JSON.parse(message.content.toString()) : "";
     input.retryCount = input.retryCount + 1 || 1;
     return input;
@@ -71,13 +72,13 @@ const logError = (err: any, message: String): void => {
 }
 
 
-const deleteMessage = (message: any, channel: amqp.Channel): void => {
+const deleteMessage = (message: amqp.Message|null, channel: amqp.Channel): void => {
     if (message)
         channel.ack(message);
 }
 
-const messageIsEmpty = (message: any): boolean => {
-    return (!message || !Object.keys(message).length);
+const messageIsInvalid = (message: any): boolean => {
+    return (!message || !Object.keys(message).length || !validOrderBody(message));
 }
 
 export default addToDbConsumer;
