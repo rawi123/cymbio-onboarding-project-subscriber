@@ -1,10 +1,18 @@
-import express from "express";
+import express,{Request,Response} from "express";
 import db from "../mysql-connection/mysql"
+import {rabbitConnectionUp} from "../rabbit/controllers/rabbitController";
+
 const router:express.Router=express.Router();
 
-router.get("/orders",async (req:express.Request,res:express.Response):Promise<void>=>{
+router.get("/orders",async (req:Request,res:Response):Promise<void>=>{
     res.status(200).json(await getOrdersAndLines());
 })
+
+router.get("/rabbit-health-check",async(req:Request,res:Response)=>{
+    await rabbitConnectionUp(req,res);
+})
+
+
 
 const getOrdersAndLines = async ():Promise<any> => {//interface
     const getAllDataSQL:string=`SELECT *

@@ -3,7 +3,7 @@ import db from "./mysql";
 
 const addToDBThrowIfErr = async (message: any): Promise<any> => {
     if (await runTests(message)) {
-        if(await insertToDb(message))
+        if (await insertToDb(message))
             return true;
     }
     throw new Error("didnt pass tests");
@@ -70,7 +70,7 @@ const insertToDb = async (message: any): Promise<boolean> => {
 
 const addOrder = async (message: any): Promise<number> => {
 
-    const sql:string = `
+    const sql: string = `
             INSERT INTO orders
             VALUES (DEFAULT, 
                     "${message.type}",
@@ -80,19 +80,19 @@ const addOrder = async (message: any): Promise<number> => {
                     ${message.expired},
                     DEFAULT);`
 
-    const orderId:number = await insertSingleDb(sql);
+    const orderId: number = await insertSingleDb(sql);
     console.log("order has been added!")
     return orderId;
 
 }
 
 const addOrderLines = async (message: any, orderNumber: number): Promise<boolean> => {
-    try{
-        let allOrderLinesAdded:boolean = true;
+    try {
+        let allOrderLinesAdded: boolean = true;
 
         for (let i = 0; i < message.order_lines.length; i++) {
             const single_order_line = message.order_lines[i];
-            const sql:string = `
+            const sql: string = `
             INSERT INTO order_lines
             VALUES (DEFAULT, 
                     "${JSON.stringify(single_order_line.notes)}", 
@@ -106,22 +106,21 @@ const addOrderLines = async (message: any, orderNumber: number): Promise<boolean
             if (!await insertSingleDb(sql)) {
                 allOrderLinesAdded = false;
                 await deleteOrder(orderNumber);
-                console.log("failed in adding order line, deleting order: ",orderNumber);
+                console.log("failed in adding order line, deleting order: ", orderNumber);
             }
         }
 
         console.log("all order lines has been added")
         return allOrderLinesAdded;
-    }
-    catch(err){
+    } catch (err) {
         await deleteOrder(orderNumber);
         throw err;
     }
 }
 
-const deleteOrder=async (orderNumber:number)=>{
+const deleteOrder = async (orderNumber: number) => {
     console.log(`deleting order number:${orderNumber} and order_lines due to fail in adding order line`);
-    const sql:string=`DELETE FROM orders
+    const sql: string = `DELETE FROM orders
                       WHERE order_id=${orderNumber};
                       DELETE FROM order_lines
                       WHERE order_id=${orderNumber};`;
@@ -144,7 +143,7 @@ const runQueryCheckExists = async (sql: string): Promise<boolean> => {
     return await query;
 }
 
-const insertSingleDb = async (sql: any):Promise<number> => {
+const insertSingleDb = async (sql: string): Promise<number> => {
 
     const query = new Promise<any>((resolve, reject) => {
         db.query(sql, (err, res) => {

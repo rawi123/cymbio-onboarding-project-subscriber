@@ -6,7 +6,8 @@ import RabbitClass from "./rabbitSubscriber";
 //await consumer(channel);
 
 
-const DBconsumer = async (message: any,queue:RabbitClass): Promise<void> => {
+const addToDbConsumer = async (message: any,queue:RabbitClass): Promise<void> => {
+
     const  objectMessage= message ? JSON.parse(message.content.toString()) : "";
 
     try {
@@ -79,5 +80,5 @@ const messageIsEmpty = (message: any): boolean => {
     return (!message || !Object.keys(message).length);
 }
 
-export default DBconsumer;
+export default addToDbConsumer;
 

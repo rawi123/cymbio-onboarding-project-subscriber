@@ -1,11 +1,7 @@
 interface orderLine {
-    id: number,
-    notes: string[],
-    order_id: number,
+    notes: string[]|string,
     quantity: number,
-    retailer_sku: string,
     billed_amount: number,
-    original_quantity: number,
     unit_price: number,
     tax_billed_amount: number,
     variant_id: number,
@@ -19,5 +15,5 @@ export default interface reqBody {
     shipping_method_code: string,
     retailer_id: number,
     expired: boolean,
-    created_at: Date,
+    retryCount?: number,
 }

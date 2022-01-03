@@ -1,36 +1,41 @@
 import amqp from "amqplib";
+import reqBody from "../interfaces/requrestInterface";
 
 
 
 class RabbitClass {
     channelName: string;
     channel: amqp.Channel | null = null;
+    consumingFunction:Function;
 
-
-    constructor(channel: string) {
+    constructor(channel: string,consumingFunction:Function) {
         this.channelName = channel;
+        this.consumingFunction=consumingFunction;
     }
 
     async initializeQueue() {
-        const rabbitRes: amqp.Channel | null = await this.connect();
+        const rabbitRes: amqp.Channel | null = await this.connectChannel();
         this.channel = rabbitRes;
-        console.log(this.channel ? `connecteds to rabbitmq, queue: ${this.channelName}` : "ERROR COULD NOT CONNECT TO RABBITMQ");
+        console.log(this.channel ? `connected to rabbitmq, queue: ${this.channelName}` : "ERROR COULD NOT CONNECT TO RABBITMQ");
     }
 
     getChannel(): amqp.Channel | null {
         return this.channel;
     }
 
-    async consumeMessages(callBack: Function): Promise<void> {
+    resetChannel():void{
+        this.channel=null;
+    }
 
+    async consumeMessages(): Promise<void> {
         try {
             if(!this.channel) throw ("channel is null");
 
-            await this.channel.consume("orders", async (message): Promise<any> => {
+            await this.channel.consume(this.channelName, async (message:amqp.Message|null): Promise<any> => {
                 if(!this.channel)
                     throw new Error("Channel is null");
 
-                await callBack(message,this);
+                await this.consumingFunction(message,this);
             });
         }
         catch(err){
@@ -38,8 +43,8 @@ class RabbitClass {
         }
     }
 
-    async reAddMessageToQueue (message: any)  {
-        if (message.retryCount <= 3) {
+    async reAddMessageToQueue (message: reqBody):Promise<void>  {
+        if (message.retryCount===undefined || message.retryCount <= 3) {
             await waitForMS(3000);
             const messageBuffedWithRetry = Buffer.from(JSON.stringify(message));
             this.channel?.sendToQueue("orders", messageBuffedWithRetry);
@@ -47,8 +52,7 @@ class RabbitClass {
         }
     }
 
-
-    async connect(retries: number = 0): Promise<amqp.Channel | null> {
+    async connectChannel(retries: number = 0): Promise<amqp.Channel | null> {
         try {
             const connection: amqp.Connection = await amqp.connect("amqp://localhost");
             const channel: amqp.Channel = await connection.createChannel();
@@ -58,12 +62,25 @@ class RabbitClass {
         } catch (err) {
             console.log(err);
             if (retries <= 3) {
-                await waitForMS(4000);
-                return await this.connect(retries + 1);
+                await waitForMS(1000);
+                return await this.connectChannel(retries + 1);
             }
             return null;
         }
     }
+
+    async connectRabbit(): Promise<boolean> {
+        try {
+            await this.initializeQueue();
+            await this.consumeMessages();
+            return true;
+
+        } catch (err) {
+            return false;
+        }
+    }
+
+
 }
 
 
