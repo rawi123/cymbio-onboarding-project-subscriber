@@ -1,7 +1,8 @@
 import amqp from "amqplib";
 import addToDBThrowIfErr from "../mysql-connection/addToDB";
 import RabbitClass from "./rabbitSubscriber";
-import {reqBody, validOrderBody} from "../interfaces/requrestInterface";
+import {reqBody} from "../interfaces/requrestInterface";
+import {validOrderBody} from "../interfaces/reqInterfaceTest/requestInterfaceTest";
 
 export const invalidInputErr: string = "input is invalid";
 export const maxRetriesReached: string = "max retries reached";

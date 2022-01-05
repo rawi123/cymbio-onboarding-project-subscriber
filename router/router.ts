@@ -1,6 +1,7 @@
 import express,{Request,Response} from "express";
-import db from "../mysql-connection/mysql"
-import {rabbitConnectionUp} from "../rabbit/controllers/rabbitController";
+import {checkRabbitConnectIfDown} from "../rabbit/controllers/rabbitController";
+import {getOrdersAndLines} from "../mysql-connection/dbController/getAllOrders";
+import deleteAllOrdersRequest from "../mysql-connection/dbController/deleteOrders";
 
 const router:express.Router=express.Router();
 
@@ -9,32 +10,14 @@ router.get("/orders",async (req:Request,res:Response):Promise<void>=>{
 })
 
 router.get("/rabbit-health-check",async(req:Request,res:Response)=>{
-    await rabbitConnectionUp(req,res);
+    await checkRabbitConnectIfDown(req,res);
+})
+
+router.delete("/delete-all-orders",async(req:Request,res:Response)=>{
+    await deleteAllOrdersRequest(req,res);
 })
 
 
-
-const getOrdersAndLines = async ():Promise<any> => {//interface
-    const getAllDataSQL:string=`SELECT *
-                FROM orders o
-                JOIN retailers r
-                USING (retailer_id)
-                JOIN order_lines ol
-                USING (order_id)
-                JOIN variants v
-                USING (variant_id); `
-
-    const query = new Promise<void>((resolve, reject) => {
-        db.query(getAllDataSQL, (err, res) => {
-            if (err)
-                reject(err);
-            else
-                resolve(res);
-        })
-    })
-
-    return query;
-}
 
 
 

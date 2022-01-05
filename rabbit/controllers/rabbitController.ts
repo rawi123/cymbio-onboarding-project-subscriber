@@ -39,7 +39,7 @@ const checkRabbitConnection=async(queueName:string):Promise<rabbitHealthCheckObj
     }
 }
 
-export const rabbitConnectionUp = async (req: Request, res: Response): Promise<void> => {
+export const checkRabbitConnectIfDown = async (req: Request, res: Response): Promise<void> => {
     const rabbitConnectionCheck:rabbitHealthCheckObj=await checkRabbitConnection(req.body?.queueName || "")
 
     if(rabbitConnectionCheck.connected)

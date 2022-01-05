@@ -3,24 +3,22 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import router from "./router/router";
-import addToDbConsumer from "./rabbit/messageConsumer";
+import addToDbConsumer from "./rabbit/orderMessageConsumer";
 import RabbitClass from "./rabbit/rabbitSubscriber";
-const app: express.Application = express();
+import {dbConnect} from "./mysql-connection/connectDb";
 
+const app: express.Application = express();
+export const ordersQueue:RabbitClass= new RabbitClass("orders",addToDbConsumer);
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use("/",router);
 
-console.log("connecting to DB");
 
-db.connect(async (err: any): Promise<any> => {
-    if (err)
-        throw(err);
-    console.log("connected to mysql");
+dbConnect(db).then().catch(err=>{
+    console.log(err);
 });
 
-export const ordersQueue:RabbitClass= new RabbitClass("orders",addToDbConsumer);
 
 ordersQueue.connectRabbit().then(rabbitConnectedFlag=>{
     console.log(rabbitConnectedFlag?"rabbit connected": "rabbit not connected");

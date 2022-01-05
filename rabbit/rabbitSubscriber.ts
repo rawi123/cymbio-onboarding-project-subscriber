@@ -13,21 +13,21 @@ class RabbitClass {
         this.consumingFunction=consumingFunction;
     }
 
-    async initializeQueue() {
+    public async initializeQueue() {
         const rabbitRes: amqp.Channel | null = await this.connectChannel();
         this.channel = rabbitRes;
         console.log(this.channel ? `connected to rabbitmq, queue: ${this.channelName}` : "ERROR COULD NOT CONNECT TO RABBITMQ");
     }
 
-    getChannel(): amqp.Channel | null {
+    public getChannel(): amqp.Channel | null {
         return this.channel;
     }
 
-    resetChannel():void{
+    public resetChannel():void{
         this.channel=null;
     }
 
-    async consumeMessages(): Promise<void> {
+    public async consumeMessages(): Promise<void> {
         try {
             if(!this.channel) throw ("channel is null");
 
@@ -43,7 +43,7 @@ class RabbitClass {
         }
     }
 
-    async reAddMessageToQueue (message: reqBody):Promise<void>  {
+    public async reAddMessageToQueue (message: reqBody):Promise<void>  {
         if (message.retryCount===undefined || message.retryCount <= 3) {
             await waitForMS(3000);
             const messageBuffedWithRetry = Buffer.from(JSON.stringify(message));
@@ -52,7 +52,7 @@ class RabbitClass {
         }
     }
 
-    async connectChannel(retries: number = 0): Promise<amqp.Channel | null> {
+    private async connectChannel(retries: number = 0): Promise<amqp.Channel | null> {
         try {
             const connection: amqp.Connection = await amqp.connect("amqp://localhost");
             const channel: amqp.Channel = await connection.createChannel();
@@ -62,16 +62,18 @@ class RabbitClass {
         } catch (err) {
             console.log(err);
             if (retries <= 3) {
-                await waitForMS(1000);
+                await waitForMS(3000);
                 return await this.connectChannel(retries + 1);
             }
             return null;
         }
     }
 
-    async connectRabbit(): Promise<boolean> {
+    public async connectRabbit(): Promise<boolean> {
         try {
             await this.initializeQueue();
+            if(!this.getChannel()) return false;
+
             await this.consumeMessages();
             return true;
 
@@ -84,7 +86,7 @@ class RabbitClass {
 }
 
 
-const waitForMS = async (number: number): Promise<Boolean> => {
+export const waitForMS = async (number: number): Promise<Boolean> => {
 
     const prom = new Promise<void>((resolve, reject) => {
         setTimeout(() => {

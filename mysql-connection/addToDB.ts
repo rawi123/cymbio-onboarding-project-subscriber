@@ -1,17 +1,20 @@
 import db from "./mysql";
-import {reqBody,orderLine} from "../interfaces/requrestInterface";
-import {didntPassTests} from "../rabbit/messageConsumer";
+import {reqBody, orderLine} from "../interfaces/requrestInterface";
+import {didntPassTests} from "../rabbit/orderMessageConsumer";
+import {checkRetailerExsit, checkVariantsForLines} from "./orderTests/orderTests";
+import runQueryReturnRes from "./runSql/runSqlQuery";
+import {runQueryThrowIfError} from "./runSql/runSqlQuery";
+import runSqlQuery from "./runSql/runSqlQuery";
 
 const addToDBThrowIfErr = async (message: reqBody): Promise<any> => {
-    if (await runTests(message)) {
+    if (await runOrderTests(message)) {
         if (await insertToDb(message))
             return true;
     }
     throw new Error(didntPassTests);
 
 }
-
-const runTests = async (message: reqBody): Promise<boolean> => {
+const runOrderTests = async (message: reqBody): Promise<boolean> => {
 
     if (!await checkRetailerExsit(message) ||
         !await checkVariantsForLines(message)) {
@@ -21,47 +24,6 @@ const runTests = async (message: reqBody): Promise<boolean> => {
     return true;
 }
 
-const checkRetailerExsit = async (message: reqBody): Promise<boolean> => {
-
-    try {
-        let sql: string = `SELECT * FROM retailers
-                   WHERE retailer_id=${message.retailer_id}`;
-
-        const retailerExist: boolean = await runQueryCheckExists(sql);
-        if (!retailerExist) {
-            console.log("failed test retailer does not exist")
-        }
-        return retailerExist;
-
-    } catch (err) {
-        throw(err);
-    }
-}
-
-const checkVariantsForLines = async (message: reqBody): Promise<boolean> => {
-    try {
-        if (!message.order_lines || !message.order_lines.length)
-            return false;
-
-        let allVariantExists: boolean = true;
-
-        for (let i = 0; i < message.order_lines.length; i++) {
-
-            const sql: string = `SELECT * FROM variants
-                         WHERE variant_id=${message.order_lines[i].variant_id};`
-
-            if (!await runQueryCheckExists(sql)) {
-                allVariantExists = false;
-                i = message.order_lines.length
-                console.log("variant does not exist")
-            }
-        }
-        return allVariantExists;
-
-    } catch (err) {
-        throw(err);
-    }
-}
 
 const insertToDb = async (message: reqBody): Promise<boolean> => {
     const orderNumber: number = await addOrder(message);
@@ -81,10 +43,9 @@ const addOrder = async (message: reqBody): Promise<number> => {
                     ${message.expired},
                     DEFAULT);`
 
-    const orderId: number = await insertSingleDb(sql);
+    const orderId: number = await runQueryReturnId(sql);
     console.log("order has been added!")
     return orderId;
-
 }
 
 const addOrderLines = async (message: reqBody, orderNumber: number): Promise<boolean> => {
@@ -104,11 +65,8 @@ const addOrderLines = async (message: reqBody, orderNumber: number): Promise<boo
                     ${single_order_line.tax_billed_amount},
                     ${single_order_line.variant_id});
             `
-            if (!await insertSingleDb(sql)) {
-                allOrderLinesAdded = false;
-                await deleteOrder(orderNumber);
-                console.log("failed in adding order line, deleting order: ", orderNumber);
-            }
+
+            await runQueryThrowIfError(sql,db)
         }
 
         console.log("all order lines has been added")
@@ -121,41 +79,23 @@ const addOrderLines = async (message: reqBody, orderNumber: number): Promise<boo
 
 const deleteOrder = async (orderNumber: number) => {
     console.log(`deleting order number:${orderNumber} and order_lines due to fail in adding order line`);
-    const sql: string = `DELETE FROM orders
+    const sql: string = `DELETE FROM order_lines
                       WHERE order_id=${orderNumber};
-                      DELETE FROM order_lines
+                      DELETE FROM orders
                       WHERE order_id=${orderNumber};`;
-    await runQueryCheckExists(sql);
+    await runSqlQuery(sql,db);
 }
 
-const runQueryCheckExists = async (sql: string): Promise<boolean> => {
-    const query = new Promise<boolean>((resolve, reject) => {
-        db.query(sql, (err, res) => {
-
-            if (err)
-                return reject(err);
-
-            if (!res.length)
-                resolve(false);
-
-            resolve(true);
-        })
-    })
-    return await query;
+export const runQueryCheckExists = async (sql: string): Promise<boolean> => {
+    const sqlResponse=await runQueryReturnRes(sql,db);
+    if(sqlResponse.length)
+        return true
+    return false;
 }
 
-const insertSingleDb = async (sql: string): Promise<number> => {
-
-    const query = new Promise<any>((resolve, reject) => {
-        db.query(sql, (err, res) => {
-            if (err)
-                reject(err);
-            else
-                resolve(res);
-        })
-    })
-
-    return (await query).insertId;
+const runQueryReturnId = async (sql: string): Promise<number> => {
+    const sqlResponse=await runQueryReturnRes(sql,db);
+    return sqlResponse.insertId;
 }
 
 export default addToDBThrowIfErr;
